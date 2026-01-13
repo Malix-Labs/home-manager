@@ -45,9 +45,16 @@
     }
     // (
       let
+        supportedSystems = [
+          "aarch64-darwin"
+          "aarch64-linux"
+          "i686-linux"
+          "x86_64-darwin"
+          "x86_64-linux"
+        ];
         forAllPkgs =
           f:
-          nixpkgs.lib.genAttrs nixpkgs.lib.systems.flakeExposed (system: f nixpkgs.legacyPackages.${system});
+          nixpkgs.lib.genAttrs supportedSystems (system: f nixpkgs.legacyPackages.${system});
       in
       {
         formatter = forAllPkgs (
