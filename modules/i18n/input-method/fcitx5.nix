@@ -14,13 +14,8 @@ in
 {
   options = {
     i18n.inputMethod.fcitx5 = {
-      fcitx5-with-addons = lib.mkOption {
-        type = lib.types.package;
-        default = pkgs.qt6Packages.fcitx5-with-addons;
-        example = lib.literalExpression "pkgs.kdePackages.fcitx5-with-addons";
-        description = ''
-          The fcitx5 package to use.
-        '';
+      fcitx5-with-addons = lib.mkPackageOption pkgs [ "qt6Packages" "fcitx5-with-addons" ] {
+        example = [ "kdePackages" "fcitx5-with-addons" ];
       };
       addons = lib.mkOption {
         type = with lib.types; listOf package;

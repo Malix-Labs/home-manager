@@ -5,7 +5,7 @@
   ...
 }:
 let
-  inherit (lib) literalExpression mkOption types;
+  inherit (lib) literalExpression mkOption mkPackageOption types;
 
   supportedBrowsers = {
     chromium = "Chromium";
@@ -34,11 +34,8 @@ let
         description = "Whether to enable ${name}.";
       };
 
-      package = mkOption {
+      package = mkPackageOption pkgs browser { nullable = true; } // {
         inherit visible;
-        type = types.nullOr types.package;
-        default = pkgs.${browser};
-        defaultText = literalExpression "pkgs.${browser}";
         description = "The ${name} package to use.";
       };
 

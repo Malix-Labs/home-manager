@@ -22,12 +22,8 @@ in
 
     package = lib.mkPackageOption pkgs "lorri" { };
 
-    nixPackage = lib.mkOption {
-      type = lib.types.package;
-      default = pkgs.nix;
-      defaultText = lib.literalExpression "pkgs.nix";
-      example = lib.literalExpression "pkgs.nixVersions.unstable";
-      description = "Which nix package to use.";
+    nixPackage = lib.mkPackageOption pkgs "nix" {
+      example = [ "nixVersions" "unstable" ];
     };
   };
 
