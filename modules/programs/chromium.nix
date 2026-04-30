@@ -27,7 +27,6 @@ let
 
       darwinDir = mkOption {
         type = types.str;
-        default = browser;
         description = "Config directory suffix on macOS.";
       };
 
