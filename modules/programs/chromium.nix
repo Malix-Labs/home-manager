@@ -18,18 +18,106 @@ let
 
   google-chrome = "Google Chrome";
 
-  supportedBrowsers = {
-    chromium = "Chromium";
-    inherit google-chrome;
-    google-chrome-beta = google-chrome + " Beta";
-    google-chrome-dev = google-chrome + " Dev";
-    brave = "Brave Browser";
-    vivaldi = "Vivaldi Browser";
+  mkChromiumBrowser = browser: types.submodule {
+    options = {
+      displayName = mkOption {
+        type = types.str;
+        description = "Human-friendly browser name.";
+      };
+
+      darwinDir = mkOption {
+        type = types.str;
+        description = "Config directory suffix on macOS.";
+      };
+
+      linuxDir = mkOption {
+        type = types.str;
+        default = browser;
+        description = "Config directory suffix on Linux.";
+      };
+
+      supportsPlasmaSupport = mkEnableOption "the Plasma/Qt integration option";
+    };
   };
 
-  plasmaSupportedBrowsers = [
-    "google-chrome"
-  ];
+  browserSpecs = {
+    chromium = {
+      spec = {
+        displayName = "Chromium";
+        darwinDir = "Chromium";
+        linuxDir = "chromium";
+        supportsPlasmaSupport = false;
+      };
+    };
+
+    brave = {
+      spec = {
+        displayName = "Brave Browser";
+        darwinDir = "BraveSoftware/Brave-Browser";
+        linuxDir = "BraveSoftware/Brave-Browser";
+        supportsPlasmaSupport = false;
+      };
+    };
+
+    google-chrome = {
+      spec = {
+        displayName = google-chrome;
+        darwinDir = "Google/Chrome";
+        linuxDir = "google-chrome";
+        supportsPlasmaSupport = true;
+      };
+    };
+
+    google-chrome-beta = {
+      spec = {
+        displayName = google-chrome + " Beta";
+        darwinDir = "Google/Chrome Beta";
+        linuxDir = "google-chrome-beta";
+        supportsPlasmaSupport = false;
+      };
+    };
+
+    google-chrome-dev = {
+      spec = {
+        displayName = google-chrome + " Dev";
+        darwinDir = "Google/Chrome Dev";
+        linuxDir = "google-chrome-dev";
+        supportsPlasmaSupport = false;
+      };
+    };
+
+    vivaldi = {
+      spec = {
+        displayName = "Vivaldi Browser";
+        darwinDir = "Vivaldi";
+        linuxDir = "vivaldi";
+        supportsPlasmaSupport = false;
+      };
+    };
+  };
+
+  browserSpecs' =
+    lib.mapAttrs
+      (browser: browserSpec: {
+        spec =
+          (lib.evalModules {
+            modules = [
+              {
+                options.spec = mkOption {
+                  type = mkChromiumBrowser browser;
+                };
+                config.spec = browserSpec.spec;
+              }
+            ];
+          }).config.spec;
+      })
+      browserSpecs;
+
+  supportedBrowsers = builtins.mapAttrs (_: browserSpec: browserSpec.spec.displayName) browserSpecs';
+
+  plasmaSupportedBrowsers =
+    builtins.attrNames
+      (builtins.filterAttrs (_: browserSpec: browserSpec.spec.supportsPlasmaSupport) browserSpecs');
 
   browserModule =
     browser: name:
@@ -201,27 +289,15 @@ let
         else
           (cfg.package.pname or (builtins.parseDrvName cfg.package.name).name);
 
+      spec = browserSpecs'.${browser}.spec;
       isProprietaryChrome = lib.hasPrefix "google-chrome" browser;
       supportsUserExtensions = !isProprietaryChrome || isDarwin;
 
-      darwinDirs = {
-        chromium = "Chromium";
-        google-chrome = "Google/Chrome";
-        google-chrome-beta = "Google/Chrome Beta";
-        google-chrome-dev = "Google/Chrome Dev";
-        brave = "BraveSoftware/Brave-Browser";
-        vivaldi = "Vivaldi";
-      };
-
-      linuxDirs = {
-        brave = "BraveSoftware/Brave-Browser";
-      };
-
       configDir =
         if isDarwin then
-          "Library/Application Support/" + (darwinDirs."${browser}" or browser)
+          "Library/Application Support/" + spec.darwinDir
         else
-          "${config.xdg.configHome}/" + (linuxDirs."${browser}" or browser);
+          "${config.xdg.configHome}/" + spec.linuxDir;
 
       extensionJson =
         ext:
@@ -246,7 +322,7 @@ let
         value.source = pkg;
       };
 
-      plasmaSupportEnabled = isLinux && lib.elem browser plasmaSupportedBrowsers && cfg.plasmaSupport;
+      plasmaSupportEnabled = isLinux && spec.supportsPlasmaSupport && cfg.plasmaSupport;
 
       nativeMessagingHosts = lib.unique (
         cfg.nativeMessagingHosts ++ lib.optional plasmaSupportEnabled cfg.plasmaBrowserIntegrationPackage
