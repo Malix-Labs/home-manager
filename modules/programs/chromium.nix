@@ -18,18 +18,58 @@ let
 
   google-chrome = "Google Chrome";
 
-  supportedBrowsers = {
-    chromium = "Chromium";
-    inherit google-chrome;
-    google-chrome-beta = google-chrome + " Beta";
-    google-chrome-dev = google-chrome + " Dev";
-    brave = "Brave Browser";
-    vivaldi = "Vivaldi Browser";
+  mkChromiumBrowser =
+    browser: spec:
+    {
+      name = spec.displayName;
+      configDir =
+        if isDarwin then
+          "Library/Application Support/" + (spec.darwinDir or browser)
+        else
+          "${config.xdg.configHome}/" + (spec.linuxDir or browser);
+
+      isProprietaryChrome = lib.hasPrefix "google-chrome" browser;
+      supportsPlasmaSupport = spec.supportsPlasmaSupport or false;
+    };
+
+  browserSpecs = {
+    chromium = {
+      displayName = "Chromium";
+      darwinDir = "Chromium";
+    };
+
+    brave = {
+      displayName = "Brave Browser";
+      darwinDir = "BraveSoftware/Brave-Browser";
+      linuxDir = "BraveSoftware/Brave-Browser";
+    };
+
+    google-chrome = {
+      displayName = google-chrome;
+      darwinDir = "Google/Chrome";
+      supportsPlasmaSupport = true;
+    };
+
+    google-chrome-beta = {
+      displayName = google-chrome + " Beta";
+      darwinDir = "Google/Chrome Beta";
+    };
+
+    google-chrome-dev = {
+      displayName = google-chrome + " Dev";
+      darwinDir = "Google/Chrome Dev";
+    };
+
+    vivaldi = {
+      displayName = "Vivaldi Browser";
+      darwinDir = "Vivaldi";
+    };
   };
 
-  plasmaSupportedBrowsers = [
-    "google-chrome"
-  ];
+  supportedBrowsers = builtins.mapAttrs (browser: spec: spec.displayName) browserSpecs;
+
+  plasmaSupportedBrowsers =
+    builtins.attrNames (builtins.filterAttrs (_: spec: spec.supportsPlasmaSupport or false) browserSpecs);
 
   browserModule =
     browser: name:
@@ -201,27 +241,9 @@ let
         else
           (cfg.package.pname or (builtins.parseDrvName cfg.package.name).name);
 
-      isProprietaryChrome = lib.hasPrefix "google-chrome" browser;
-      supportsUserExtensions = !isProprietaryChrome || isDarwin;
-
-      darwinDirs = {
-        chromium = "Chromium";
-        google-chrome = "Google/Chrome";
-        google-chrome-beta = "Google/Chrome Beta";
-        google-chrome-dev = "Google/Chrome Dev";
-        brave = "BraveSoftware/Brave-Browser";
-        vivaldi = "Vivaldi";
-      };
-
-      linuxDirs = {
-        brave = "BraveSoftware/Brave-Browser";
-      };
-
-      configDir =
-        if isDarwin then
-          "Library/Application Support/" + (darwinDirs."${browser}" or browser)
-        else
-          "${config.xdg.configHome}/" + (linuxDirs."${browser}" or browser);
+      browserSpec = mkChromiumBrowser browser browserSpecs.${browser};
+      supportsUserExtensions = !browserSpec.isProprietaryChrome || isDarwin;
+      configDir = browserSpec.configDir;
 
       extensionJson =
         ext:
@@ -279,13 +301,13 @@ let
           message = "Cannot set `version` without `crxPath`, or `crxPath` without `version`, for `${browser}`.";
         }
         {
-          assertion = !(isProprietaryChrome && isLinux && cfg.extensions != [ ]);
+          assertion = !(browserSpec.isProprietaryChrome && isLinux && cfg.extensions != [ ]);
           message = "Cannot set `extensions` for `${browser}` on Linux. Google Chrome only loads external extensions from system-managed directories, which Home Manager does not manage.";
         }
         {
           assertion =
             !(
-              isProprietaryChrome
+              browserSpec.isProprietaryChrome
               && isDarwin
               && !builtins.all (
                 ext: ext.crxPath == null && ext.version == null && ext.updateUrl == chromeWebStoreUpdateUrl
