@@ -40,64 +40,84 @@ let
     };
   };
 
-  browserSpecsRaw = {
+  browserSpecs = {
     chromium = {
-      displayName = "Chromium";
-      darwinDir = "Chromium";
+      spec = {
+        displayName = "Chromium";
+        darwinDir = "Chromium";
+        linuxDir = "chromium";
+        supportsPlasmaSupport = false;
+      };
     };
 
     brave = {
-      displayName = "Brave Browser";
-      darwinDir = "BraveSoftware/Brave-Browser";
-      linuxDir = "BraveSoftware/Brave-Browser";
+      spec = {
+        displayName = "Brave Browser";
+        darwinDir = "BraveSoftware/Brave-Browser";
+        linuxDir = "BraveSoftware/Brave-Browser";
+        supportsPlasmaSupport = false;
+      };
     };
 
     google-chrome = {
-      displayName = google-chrome;
-      darwinDir = "Google/Chrome";
-      supportsPlasmaSupport = true;
+      spec = {
+        displayName = google-chrome;
+        darwinDir = "Google/Chrome";
+        linuxDir = "google-chrome";
+        supportsPlasmaSupport = true;
+      };
     };
 
     google-chrome-beta = {
-      displayName = google-chrome + " Beta";
-      darwinDir = "Google/Chrome Beta";
+      spec = {
+        displayName = google-chrome + " Beta";
+        darwinDir = "Google/Chrome Beta";
+        linuxDir = "google-chrome-beta";
+        supportsPlasmaSupport = false;
+      };
     };
 
     google-chrome-dev = {
-      displayName = google-chrome + " Dev";
-      darwinDir = "Google/Chrome Dev";
+      spec = {
+        displayName = google-chrome + " Dev";
+        darwinDir = "Google/Chrome Dev";
+        linuxDir = "google-chrome-dev";
+        supportsPlasmaSupport = false;
+      };
     };
 
     vivaldi = {
-      displayName = "Vivaldi Browser";
-      darwinDir = "Vivaldi";
+      spec = {
+        displayName = "Vivaldi Browser";
+        darwinDir = "Vivaldi";
+        linuxDir = "vivaldi";
+        supportsPlasmaSupport = false;
+      };
     };
   };
 
-  browserSpecs =
-    (lib.evalModules {
-      modules = [
-        {
-          options.browserSpecs = mkOption {
-            type = types.attrsOf (
-              types.submodule ({ name, ... }: {
+  browserSpecs' =
+    lib.mapAttrs
+      (browser: browserSpec: {
+        spec =
+          (lib.evalModules {
+            modules = [
+              {
                 options.spec = mkOption {
-                  type = mkChromiumBrowser name;
+                  type = mkChromiumBrowser browser;
                 };
-              })
-            );
-          };
+                config.spec = browserSpec.spec;
+              }
+            ];
+          }).config.spec;
+      })
+      browserSpecs;
 
-          config.browserSpecs = builtins.mapAttrs (name: spec: { spec = spec; }) browserSpecsRaw;
-        }
-      ];
-    }).config.browserSpecs;
-
-  supportedBrowsers = builtins.mapAttrs (_: browserSpec: browserSpec.spec.displayName) browserSpecs;
+  supportedBrowsers = builtins.mapAttrs (_: browserSpec: browserSpec.spec.displayName) browserSpecs';
 
   plasmaSupportedBrowsers =
     builtins.attrNames
-      (builtins.filterAttrs (_: browserSpec: browserSpec.spec.supportsPlasmaSupport) browserSpecs);
+      (builtins.filterAttrs (_: browserSpec: browserSpec.spec.supportsPlasmaSupport) browserSpecs');
 
   browserModule =
     browser: name:
@@ -269,7 +289,7 @@ let
         else
           (cfg.package.pname or (builtins.parseDrvName cfg.package.name).name);
 
-      spec = browserSpecs.${browser}.spec;
+      spec = browserSpecs'.${browser}.spec;
       isProprietaryChrome = lib.hasPrefix "google-chrome" browser;
       supportsUserExtensions = !isProprietaryChrome || isDarwin;
 
