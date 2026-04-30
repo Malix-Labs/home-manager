@@ -18,7 +18,7 @@ let
 
   google-chrome = "Google Chrome";
 
-  mkChromiumBrowser = types.submodule {
+  mkChromiumBrowser = browser: types.submodule {
     options = {
       displayName = mkOption {
         type = types.str;
@@ -27,13 +27,13 @@ let
 
       darwinDir = mkOption {
         type = types.nullOr types.str;
-        default = null;
+        default = browser;
         description = "Config directory suffix on macOS.";
       };
 
       linuxDir = mkOption {
         type = types.nullOr types.str;
-        default = null;
+        default = browser;
         description = "Config directory suffix on Linux.";
       };
 
@@ -75,8 +75,7 @@ let
     };
   };
 
-  supportedBrowsers =
-    builtins.mapAttrs (_: spec: spec.displayName) (lib.mapAttrs (_: lib.mkDefault) browserSpecs);
+  supportedBrowsers = builtins.mapAttrs (_: spec: spec.displayName) browserSpecs;
 
   plasmaSupportedBrowsers =
     builtins.attrNames (builtins.filterAttrs (_: spec: spec.supportsPlasmaSupport) browserSpecs);
@@ -255,7 +254,7 @@ let
         modules = [
           {
             options.spec = mkOption {
-              type = mkChromiumBrowser;
+              type = mkChromiumBrowser browser;
             };
 
             config.spec = browserSpecs.${browser};
