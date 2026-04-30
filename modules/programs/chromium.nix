@@ -40,7 +40,7 @@ let
     };
   };
 
-  browserSpecs = {
+  browserSpecsRaw = {
     chromium = {
       displayName = "Chromium";
       darwinDir = "Chromium";
@@ -74,10 +74,30 @@ let
     };
   };
 
-  supportedBrowsers = builtins.mapAttrs (_: spec: spec.displayName) browserSpecs;
+  browserSpecs =
+    (lib.evalModules {
+      modules = [
+        {
+          options.browserSpecs = mkOption {
+            type = types.attrsOf (
+              types.submodule ({ name, ... }: {
+                options.spec = mkOption {
+                  type = mkChromiumBrowser name;
+                };
+              })
+            );
+          };
+
+          config.browserSpecs = builtins.mapAttrs (name: spec: { spec = spec; }) browserSpecsRaw;
+        }
+      ];
+    }).config.browserSpecs;
+
+  supportedBrowsers = builtins.mapAttrs (_: browserSpec: browserSpec.spec.displayName) browserSpecs;
 
   plasmaSupportedBrowsers =
-    builtins.attrNames (builtins.filterAttrs (_: spec: spec.supportsPlasmaSupport) browserSpecs);
+    builtins.attrNames
+      (builtins.filterAttrs (_: browserSpec: browserSpec.spec.supportsPlasmaSupport) browserSpecs);
 
   browserModule =
     browser: name:
@@ -249,19 +269,7 @@ let
         else
           (cfg.package.pname or (builtins.parseDrvName cfg.package.name).name);
 
-      browserSpec = lib.evalModules {
-        modules = [
-          {
-            options.spec = mkOption {
-              type = mkChromiumBrowser browser;
-            };
-
-            config.spec = browserSpecs.${browser};
-          }
-        ];
-      };
-
-      spec = browserSpec.config.spec;
+      spec = browserSpecs.${browser}.spec;
       isProprietaryChrome = lib.hasPrefix "google-chrome" browser;
       supportsUserExtensions = !isProprietaryChrome || isDarwin;
 
