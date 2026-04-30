@@ -26,13 +26,13 @@ let
       };
 
       darwinDir = mkOption {
-        type = types.nullOr types.str;
+        type = types.str;
         default = browser;
         description = "Config directory suffix on macOS.";
       };
 
       linuxDir = mkOption {
-        type = types.nullOr types.str;
+        type = types.str;
         default = browser;
         description = "Config directory suffix on Linux.";
       };
@@ -268,9 +268,9 @@ let
 
       configDir =
         if isDarwin then
-          "Library/Application Support/" + (spec.darwinDir or browser)
+          "Library/Application Support/" + spec.darwinDir
         else
-          "${config.xdg.configHome}/" + (spec.linuxDir or browser);
+          "${config.xdg.configHome}/" + spec.linuxDir;
 
       extensionJson =
         ext:
