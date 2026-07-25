@@ -386,6 +386,16 @@
     github = "mainrs";
     githubId = 5113257;
   };
+  malix = {
+    name = "Malix - Alix Brunet";
+    github = "Malix-Labs";
+    githubId = 76160668;
+    email = "alixbrunetcontact+nixpkgs@gmail.com";
+    keys = [
+      { fingerprint = "cgtiI0dV+OGTuIFFuuCPWZPgF5OaiSkmZzobIdoWQO0"; } # SSH
+      { fingerprint = "369E2AB995539B6F30AAC24C600394C79ED874E5"; } # OpenPGP
+    ];
+  };
   mforster = {
     name = "Michael Forster";
     email = "email@michael-forster.de";
